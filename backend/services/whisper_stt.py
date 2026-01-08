@@ -58,6 +58,12 @@ class WhisperSTT:
             return transcript.text
             
         except Exception as e:
-            logger.error(f"Whisper transcription error: {str(e)}")
-            # В случае ошибки не возвращаем "успешный" текст, а сигнализируем ошибку
-            raise RuntimeError("Speech recognition failed")
+            # Важно: не маскируем причину ошибки, иначе на фронте всегда будет
+            # одно и то же сообщение и невозможно понять, что именно сломалось
+            # (ключ/квота/формат/лимиты/сеть).
+            logger.exception("Whisper transcription error")
+
+            # Не включаем секреты; как правило, сообщения SDK не содержат ключ.
+            err_type = type(e).__name__
+            err_msg = str(e).strip() or "Unknown error"
+            raise RuntimeError(f"Speech recognition failed ({err_type}): {err_msg}") from e
