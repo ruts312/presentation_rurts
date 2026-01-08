@@ -45,12 +45,29 @@ class WhisperSTT:
                 temp_path = temp_file.name
             
             # Распознавание через Whisper API
+            # Важно: Whisper API не поддерживает language="ky" (Kyrgyz) и вернёт 400.
+            # Поэтому для кыргызского используем авто-определение языка (не передаём параметр language).
+            language_hint_raw = (os.getenv("STT_LANGUAGE", "ky") or "").strip().lower()
+            language_hint: Optional[str] = language_hint_raw if language_hint_raw and language_hint_raw not in {"ky", "kyrgyz", "kirghiz"} else None
+
             with open(temp_path, "rb") as audio_file:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="ky"  # Кыргызский язык
-                )
+                params = {
+                    "model": "whisper-1",
+                    "file": audio_file,
+                }
+                if language_hint:
+                    params["language"] = language_hint
+
+                try:
+                    transcript = client.audio.transcriptions.create(**params)
+                except Exception as e:
+                    # Если язык не поддерживается (часто это происходит для ky) — пробуем ещё раз без language
+                    msg = str(e)
+                    if ("unsupported_language" in msg) or ("Language 'ky' is not supported" in msg):
+                        params.pop("language", None)
+                        transcript = client.audio.transcriptions.create(**params)
+                    else:
+                        raise
             
             # Удаление временного файла
             os.unlink(temp_path)
