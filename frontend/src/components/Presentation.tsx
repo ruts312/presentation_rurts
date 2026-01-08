@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Slide from './Slide';
 import AudioPlayer from './AudioPlayer';
 import VoiceRecorder from './VoiceRecorder';
-import QAPanel from './QAPanel';
 import { fetchSlides, textToSpeech, speechToText, askQuestion, Slide as SlideType, API_ORIGIN } from '../services/api';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -17,7 +16,7 @@ const Presentation: React.FC = () => {
   // Новые состояния
   const [hasStarted, setHasStarted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [, setIsAudioPlaying] = useState(false);
   
   // Состояние для чата
   const [messages, setMessages] = useState<Array<{role: 'user' | 'assistant', text: string, audio?: Blob}>>([]);
@@ -25,8 +24,6 @@ const Presentation: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [textInput, setTextInput] = useState('');
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   // Загрузка слайдов при монтировании
   useEffect(() => {
     loadSlides();
