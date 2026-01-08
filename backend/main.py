@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,8 +8,10 @@ from routers import slides, tts, stt, qa
 import uvicorn
 from dotenv import load_dotenv
 
+BASE_DIR = Path(__file__).resolve().parent
+
 # Загрузить переменные окружения
-load_dotenv()
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 app = FastAPI(
     title="Кыргызская Презентация API",
@@ -18,7 +21,7 @@ app = FastAPI(
 
 # Раздача готовых аудио-файлов слайдов
 # backend/data/audio/slide_01.wav -> GET /audio/slide_01.wav
-app.mount("/audio", StaticFiles(directory="data/audio"), name="audio")
+app.mount("/audio", StaticFiles(directory=str(BASE_DIR / "data" / "audio")), name="audio")
 
 # CORS настройки
 # В проде на Railway удобнее задавать явно:

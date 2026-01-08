@@ -8,17 +8,30 @@ interface AudioPlayerProps {
 }
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioBlob, autoPlay = false, onEnded }) => {
-  const { isPlaying, currentTime, duration, play, pause, stop } = useAudio(onEnded);
+  const { isPlaying, currentTime, duration, load, play, pause } = useAudio(onEnded);
 
   useEffect(() => {
-    if (audioBlob && autoPlay) {
-      play(audioBlob);
+    if (!audioBlob) return;
+    // Загружаем blob один раз (не сбрасывая прогресс при паузе/продолжении)
+    load(audioBlob);
+    if (autoPlay) {
+      play();
     }
   }, [audioBlob, autoPlay]);
 
+  useEffect(() => {
+    if (!audioBlob) return;
+    if (autoPlay) {
+      play();
+    } else {
+      pause();
+    }
+  }, [autoPlay]);
+
   const handlePlay = () => {
     if (audioBlob) {
-      play(audioBlob);
+      // Если уже загружено — продолжим с места паузы
+      play();
     }
   };
 
@@ -56,16 +69,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioBlob, autoPlay = false, 
             </svg>
           </button>
         )}
-        
-        <button
-          onClick={stop}
-          className="bg-gray-600 hover:bg-gray-700 text-white rounded-full p-3 transition-colors"
-          title="Остановить"
-        >
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 6h12v12H6z" />
-          </svg>
-        </button>
       </div>
 
       <div className="flex-1">

@@ -4,6 +4,8 @@ export const useAudio = (onEnded?: () => void) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const audioBlobRef = useRef<Blob | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -13,8 +15,16 @@ export const useAudio = (onEnded?: () => void) => {
       audioRef.current.pause();
       audioRef.current = null;
     }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
 
-    const audio = new Audio(URL.createObjectURL(audioBlob));
+    const url = URL.createObjectURL(audioBlob);
+    audioUrlRef.current = url;
+    audioBlobRef.current = audioBlob;
+
+    const audio = new Audio(url);
     audioRef.current = audio;
 
     audio.addEventListener('loadedmetadata', () => {
@@ -37,11 +47,27 @@ export const useAudio = (onEnded?: () => void) => {
     return audio;
   };
 
+  // Загрузить аудио (без автозапуска)
+  const load = (audioBlob: Blob) => {
+    if (audioBlobRef.current === audioBlob && audioRef.current) {
+      return;
+    }
+    createAudio(audioBlob);
+    setIsPlaying(false);
+    setIsPaused(false);
+    setCurrentTime(0);
+  };
+
   // Воспроизвести аудио
   const play = async (audioBlob?: Blob) => {
     if (audioBlob) {
-      const audio = createAudio(audioBlob);
-      await audio.play();
+      // Если это тот же blob и аудио уже создано — просто продолжаем
+      if (audioBlobRef.current === audioBlob && audioRef.current) {
+        await audioRef.current.play();
+      } else {
+        const audio = createAudio(audioBlob);
+        await audio.play();
+      }
       setIsPlaying(true);
       setIsPaused(false);
     } else if (audioRef.current) {
@@ -78,6 +104,10 @@ export const useAudio = (onEnded?: () => void) => {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
     };
   }, []);
 
@@ -86,6 +116,7 @@ export const useAudio = (onEnded?: () => void) => {
     isPaused,
     currentTime,
     duration,
+    load,
     play,
     pause,
     stop,

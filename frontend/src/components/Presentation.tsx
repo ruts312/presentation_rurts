@@ -23,6 +23,14 @@ const Presentation: React.FC = () => {
   const [isProcessingQA, setIsProcessingQA] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [textInput, setTextInput] = useState('');
+
+  const STT_FAILURE_TEXT = 'Суроону угууда катачылык болду. Кайра аракет кылып көрүңүз.';
+  const [isSttErrorOpen, setIsSttErrorOpen] = useState(false);
+  const [sttErrorMessage, setSttErrorMessage] = useState<string>('');
+  const showSttFailurePopup = (message: string) => {
+    setSttErrorMessage(message);
+    setIsSttErrorOpen(true);
+  };
   
   // Загрузка слайдов при монтировании
   useEffect(() => {
@@ -43,7 +51,7 @@ const Presentation: React.FC = () => {
       setSlides(data.slides);
       setError(null);
     } catch (err) {
-      setError('Ошибка загрузки слайдов');
+      setError('Слайддарды жүктөөдө ката кетти');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -140,12 +148,26 @@ const Presentation: React.FC = () => {
 
   const handleRecordingComplete = async (recordedAudioBlob: Blob) => {
     setIsProcessingQA(true);
-    
+
     try {
       // 1. Распознать речь
-      const transcription = await speechToText(recordedAudioBlob);
-      const userMessage = { role: 'user' as const, text: transcription };
-      setMessages([...messages, userMessage]);
+      let transcription = '';
+      try {
+        transcription = (await speechToText(recordedAudioBlob)).trim();
+      } catch (err) {
+        console.error('STT error:', err);
+        showSttFailurePopup('Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.');
+        return;
+      }
+
+      // Бэкенд может вернуть текст-заглушку при ошибке распознавания —
+      // не отправляем это в чат, а показываем окошко.
+      if (!transcription || transcription === STT_FAILURE_TEXT) {
+        showSttFailurePopup('Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.');
+        return;
+      }
+
+      setMessages(prev => [...prev, { role: 'user' as const, text: transcription }]);
 
       // 2. Получить ответ от GPT
       const currentSlide = slides[currentSlideIndex];
@@ -164,7 +186,6 @@ const Presentation: React.FC = () => {
       const answerBlob = new Blob([audioArray], { type: 'audio/wav' });
 
       setMessages(prev => [...prev, { role: 'assistant', text: response.answer, audio: answerBlob }]);
-
     } catch (err) {
       console.error('Error processing question:', err);
       setMessages(prev => [...prev, { role: 'assistant', text: 'Извините, произошла ошибка при обработке вашего вопроса.' }]);
@@ -178,7 +199,7 @@ const Presentation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Загрузка презентации...</p>
+          <p className="text-gray-600 dark:text-gray-400">Презентация жүктөлүүдө...</p>
         </div>
       </div>
     );
@@ -188,7 +209,7 @@ const Presentation: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center text-red-600">
-          <p className="text-xl font-bold mb-2">❌ Ошибка</p>
+          <p className="text-xl font-bold mb-2">❌ Ката</p>
           <p>{error}</p>
         </div>
       </div>
@@ -198,7 +219,7 @@ const Presentation: React.FC = () => {
   if (slides.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <p className="text-gray-600 dark:text-gray-400">Нет доступных слайдов</p>
+        <p className="text-gray-600 dark:text-gray-400">Жеткиликтүү слайд жок</p>
       </div>
     );
   }
@@ -212,18 +233,18 @@ const Presentation: React.FC = () => {
             🌍 Адам Укуктары
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Интерактивная презентация на кыргызском языке
+            Кыргыз тилиндеги интерактивдүү презентация
           </p>
           <div className="mb-8 text-lg text-blue-100">
-            <p>📊 {slides.length} слайдов</p>
-            <p>🎤 Голосовой ассистент с ИИ</p>
-            <p>🔊 Автоматическое озвучивание</p>
+            <p>📊 {slides.length} слайд</p>
+            <p>🎤 ЖИ менен үн жардамчысы</p>
+            <p>🔊 Автоматтык үндөө</p>
           </div>
           <button
             onClick={startPresentation}
             className="bg-white text-blue-600 px-12 py-6 rounded-2xl font-bold text-2xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-2xl"
           >
-            ▶️ Запустить презентацию
+            ▶️ Презентацияны баштоо
           </button>
         </div>
       </div>
@@ -396,6 +417,40 @@ const Presentation: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Окошко ошибки распознавания речи */}
+      {isSttErrorOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Speech recognition error"
+          onClick={() => setIsSttErrorOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ката</h3>
+                <p className="mt-2 text-gray-700 dark:text-gray-300">{sttErrorMessage}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                onClick={() => setIsSttErrorOpen(false)}
+              >
+                Ок
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
