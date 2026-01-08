@@ -4,7 +4,7 @@ uvicorn[standard]==0.27.0
 python-multipart==0.0.6
 openai==1.10.0
 httpx==0.26.0
-pydantic==2.5.3
+pydantic>=2.10,<3
 python-dotenv==1.0.0
 redis==5.0.1
 
