@@ -115,16 +115,17 @@ const Presentation: React.FC = () => {
 
   const handleTextQuestion = async () => {
     if (!textInput.trim()) return;
-    
-    const userMessage = { role: 'user' as const, text: textInput };
-    setMessages([...messages, userMessage]);
+
+    const question = textInput.trim();
+    const userMessage = { role: 'user' as const, text: question };
+    setMessages(prev => [...prev, userMessage]);
     setTextInput('');
     setIsProcessingQA(true);
     
     try {
       const currentSlide = slides[currentSlideIndex];
       const response = await askQuestion({
-        question: textInput,
+        question,
         slide_context: currentSlide.content,
         slide_id: currentSlide.id,
       });
@@ -156,7 +157,8 @@ const Presentation: React.FC = () => {
         transcription = (await speechToText(recordedAudioBlob)).trim();
       } catch (err) {
         console.error('STT error:', err);
-        showSttFailurePopup('Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.');
+        const msg = err instanceof Error && err.message ? err.message : 'Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.';
+        showSttFailurePopup(msg);
         return;
       }
 
@@ -166,25 +168,10 @@ const Presentation: React.FC = () => {
         return;
       }
 
-      setMessages(prev => [...prev, { role: 'user' as const, text: transcription }]);
-
-      // 2. Получить ответ от GPT
-      const currentSlide = slides[currentSlideIndex];
-      const response = await askQuestion({
-        question: transcription,
-        slide_context: currentSlide.content,
-        slide_id: currentSlide.id,
-      });
-
-      // 3. Конвертировать base64 аудио в Blob
-      const audioData = atob(response.audio);
-      const audioArray = new Uint8Array(audioData.length);
-      for (let i = 0; i < audioData.length; i++) {
-        audioArray[i] = audioData.charCodeAt(i);
-      }
-      const answerBlob = new Blob([audioArray], { type: 'audio/wav' });
-
-      setMessages(prev => [...prev, { role: 'assistant', text: response.answer, audio: answerBlob }]);
+      // 2) Вставить распознанный текст в поле ввода, чтобы пользователь мог
+      // отредактировать и отправить вручную.
+      setIsChatOpen(true);
+      setTextInput(transcription);
     } catch (err) {
       console.error('Error processing question:', err);
       setMessages(prev => [...prev, { role: 'assistant', text: 'Извините, произошла ошибка при обработке вашего вопроса.' }]);

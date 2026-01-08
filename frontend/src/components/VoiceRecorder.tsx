@@ -75,7 +75,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, disa
                 onClick={handleSubmit}
                 className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition-colors"
               >
-                Отправить вопрос
+                Преобразовать в текст
               </button>
               <button
                 onClick={clearRecording}
