@@ -24,7 +24,7 @@ const Presentation: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [textInput, setTextInput] = useState('');
 
-  const STT_FAILURE_TEXT = 'Суроону угууда катачылык болду. Кайра аракет кылып көрүңүз.';
+  // Если STT не распознал речь (пусто/ошибка), показываем модальное окно.
   const [isSttErrorOpen, setIsSttErrorOpen] = useState(false);
   const [sttErrorMessage, setSttErrorMessage] = useState<string>('');
   const showSttFailurePopup = (message: string) => {
@@ -160,9 +160,8 @@ const Presentation: React.FC = () => {
         return;
       }
 
-      // Бэкенд может вернуть текст-заглушку при ошибке распознавания —
-      // не отправляем это в чат, а показываем окошко.
-      if (!transcription || transcription === STT_FAILURE_TEXT) {
+      // Если распознать не удалось — не отправляем в чат, а показываем окошко.
+      if (!transcription) {
         showSttFailurePopup('Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.');
         return;
       }

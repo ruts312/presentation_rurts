@@ -65,13 +65,21 @@ export const speechToText = async (audioBlob: Blob): Promise<string> => {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
 
-  const response = await api.post('/stt', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  try {
+    const response = await api.post('/stt', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
 
-  return response.data.text;
+    return response.data.text;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const detail = (err.response?.data as any)?.detail;
+      throw new Error(detail || err.message || 'STT error');
+    }
+    throw err;
+  }
 };
 
 // Вопросы и ответы

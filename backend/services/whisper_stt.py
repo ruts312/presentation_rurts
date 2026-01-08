@@ -59,5 +59,5 @@ class WhisperSTT:
             
         except Exception as e:
             logger.error(f"Whisper transcription error: {str(e)}")
-            # В случае ошибки возвращаем заглушку
-            return "Суроону угууда катачылык болду. Кайра аракет кылып көрүңүз."
+            # В случае ошибки не возвращаем "успешный" текст, а сигнализируем ошибку
+            raise RuntimeError("Speech recognition failed")
