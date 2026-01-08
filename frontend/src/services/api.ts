@@ -2,6 +2,9 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Нужен для статики вне /api (например, /audio/slide_01.wav)
+export const API_ORIGIN = new URL(API_BASE_URL).origin;
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -13,6 +16,7 @@ export interface Slide {
   id: number;
   title: string;
   content: string;
+  tts?: string;
   notes?: string;
 }
 

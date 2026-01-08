@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export const useAudio = () => {
+export const useAudio = (onEnded?: () => void) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -29,6 +29,9 @@ export const useAudio = () => {
       setIsPlaying(false);
       setIsPaused(false);
       setCurrentTime(0);
+      if (onEnded) {
+        onEnded();
+      }
     });
 
     return audio;

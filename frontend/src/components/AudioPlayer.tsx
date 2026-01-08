@@ -7,8 +7,8 @@ interface AudioPlayerProps {
   onEnded?: () => void;
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioBlob, autoPlay = false }) => {
-  const { isPlaying, currentTime, duration, play, pause, stop } = useAudio();
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioBlob, autoPlay = false, onEnded }) => {
+  const { isPlaying, currentTime, duration, play, pause, stop } = useAudio(onEnded);
 
   useEffect(() => {
     if (audioBlob && autoPlay) {

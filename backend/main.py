@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routers import slides, tts, stt, qa
 import uvicorn
 from dotenv import load_dotenv
@@ -13,10 +16,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Раздача готовых аудио-файлов слайдов
+# backend/data/audio/slide_01.wav -> GET /audio/slide_01.wav
+app.mount("/audio", StaticFiles(directory="data/audio"), name="audio")
+
 # CORS настройки
+cors_allow_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+if cors_allow_origins_env:
+    allow_origins = [o.strip() for o in cors_allow_origins_env.split(",") if o.strip()]
+else:
+    allow_origins = ["http://localhost:5173", "http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
