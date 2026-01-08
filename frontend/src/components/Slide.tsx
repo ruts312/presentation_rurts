@@ -39,6 +39,11 @@ const getImageUrl = (slideId: number) => {
   return `https://source.unsplash.com/900x700/?${encodeURIComponent(query)}`;
 };
 
+const getSlideImageUrl = (slide: SlideType) => {
+  if (slide.image_url && slide.image_url.trim().length > 0) return slide.image_url;
+  return getImageUrl(slide.id);
+};
+
 const Slide: React.FC<SlideProps> = ({ slide }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 min-h-[520px]">
@@ -63,7 +68,7 @@ const Slide: React.FC<SlideProps> = ({ slide }) => {
         <div className="w-full">
           <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
             <img
-              src={getImageUrl(slide.id)}
+              src={getSlideImageUrl(slide)}
               alt={slide.title}
               className="w-full h-[260px] md:h-[360px] object-cover"
               loading="lazy"
