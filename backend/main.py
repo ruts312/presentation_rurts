@@ -21,18 +21,31 @@ app = FastAPI(
 app.mount("/audio", StaticFiles(directory="data/audio"), name="audio")
 
 # CORS настройки
+# В проде на Railway удобнее задавать явно:
+# - CORS_ALLOW_ORIGINS="https://<frontend-domain>" (через запятую для нескольких)
+# или
+# - CORS_ALLOW_ORIGIN_REGEX="https://.*\\.up\\.railway\\.app"
 cors_allow_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+cors_allow_origin_regex = os.getenv("CORS_ALLOW_ORIGIN_REGEX", "").strip() or None
+
 if cors_allow_origins_env:
     allow_origins = [o.strip() for o in cors_allow_origins_env.split(",") if o.strip()]
 else:
     allow_origins = ["http://localhost:5173", "http://localhost:3000"]
 
+# Если указан "*", браузеры запрещают allow_credentials=true — отключаем credentials.
+allow_credentials = True
+if any(o == "*" for o in allow_origins):
+    allow_origins = ["*"]
+    allow_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_credentials=True,
+    allow_origin_regex=cors_allow_origin_regex,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 # Подключение роутеров
