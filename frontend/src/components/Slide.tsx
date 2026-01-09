@@ -1,5 +1,6 @@
 import React from 'react';
 import { Slide as SlideType } from '../services/api';
+import logo from '../photo_2025-12-23_00-43-53-removebg-preview.png';
 
 interface SlideProps {
   slide: SlideType;
@@ -46,7 +47,14 @@ const getSlideImageUrl = (slide: SlideType) => {
 
 const Slide: React.FC<SlideProps> = ({ slide }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 min-h-[520px]">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 min-h-[520px] relative">
+      <img
+        src={logo}
+        alt="Logo"
+        className="absolute left-6 top-6 md:left-10 md:top-10 w-16 h-auto md:w-20 select-none"
+        draggable={false}
+      />
+
       <div className="mb-6 flex items-center justify-between">
         <span className="text-blue-600 dark:text-blue-300 text-sm font-semibold">
           Слайд {slide.id}
