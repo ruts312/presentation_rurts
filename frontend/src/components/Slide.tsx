@@ -51,17 +51,18 @@ const Slide: React.FC<SlideProps> = ({ slide }) => {
       <img
         src={logo}
         alt="Logo"
-        className="absolute left-6 top-6 md:left-10 md:top-10 w-16 h-auto md:w-20 select-none"
+        className="absolute right-6 top-6 md:right-10 md:top-10 w-16 h-auto md:w-20 select-none"
         draggable={false}
       />
 
-      <div className="mb-6 flex items-center justify-between">
-        <span className="text-blue-600 dark:text-blue-300 text-sm font-semibold">
-          Слайд {slide.id}
-        </span>
-      </div>
+      <div className="pt-12 md:pt-14">
+        <div className="mb-6 flex items-center justify-between">
+          <span className="text-blue-600 dark:text-blue-300 text-sm font-semibold">
+            Слайд {slide.id}
+          </span>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Текст слева */}
         <div className="flex flex-col">
           <h1 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
@@ -73,7 +74,7 @@ const Slide: React.FC<SlideProps> = ({ slide }) => {
         </div>
 
         {/* Картинка справа */}
-        <div className="w-full">
+        <div className="w-full mt-6 lg:mt-10">
           <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
             <img
               src={getSlideImageUrl(slide)}
@@ -86,6 +87,7 @@ const Slide: React.FC<SlideProps> = ({ slide }) => {
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
             Иллюстрация под тему слайда
           </p>
+        </div>
         </div>
       </div>
     </div>
