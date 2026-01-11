@@ -45,6 +45,9 @@ const Presentation: React.FC = () => {
   // Загрузка аудио при смене слайда
   useEffect(() => {
     if (slides.length > 0 && hasStarted) {
+      // Сбросить текущее аудио мгновенно, чтобы звук всегда соответствовал слайду
+      setIsAudioPlaying(false);
+      setAudioBlob(null);
       loadSlideAudio(slides[currentSlideIndex]);
     }
   }, [currentSlideIndex, slides, hasStarted]);
@@ -116,12 +119,18 @@ const Presentation: React.FC = () => {
 
   const nextSlide = () => {
     if (currentSlideIndex < slides.length - 1) {
+      // Сразу остановить/сбросить текущее аудио, чтобы оно не продолжало играть
+      setIsAudioPlaying(false);
+      setAudioBlob(null);
       setCurrentSlideIndex(currentSlideIndex + 1);
     }
   };
 
   const previousSlide = () => {
     if (currentSlideIndex > 0) {
+      // Сразу остановить/сбросить текущее аудио, чтобы оно не продолжало играть
+      setIsAudioPlaying(false);
+      setAudioBlob(null);
       setCurrentSlideIndex(currentSlideIndex - 1);
     }
   };
