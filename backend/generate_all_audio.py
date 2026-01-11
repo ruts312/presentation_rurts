@@ -51,11 +51,17 @@ def _resolve_paths(lang: str, deck: Optional[str] = None) -> tuple[Path, Path, s
     return slides_file, audio_dir, "ky"
 
 
-async def generate_all_slides(lang: str = "ky", deck: Optional[str] = None):
+async def generate_all_slides(
+    lang: str = "ky",
+    deck: Optional[str] = None,
+    force: bool = False,
+    voice: Optional[str] = None,
+    require_openai: bool = False,
+):
     """Генерирует аудио для всех слайдов выбранного языка"""
-    
-    # Убедимся что используем OpenAI
-    os.environ['USE_LOCAL_TTS'] = 'false'
+
+    if voice:
+        os.environ["TTS_VOICE"] = voice
     
     slides_file, audio_dir, language = _resolve_paths(lang, deck)
 
@@ -76,9 +82,31 @@ async def generate_all_slides(lang: str = "ky", deck: Optional[str] = None):
     
     # Инициализировать TTS
     tts = HuggingFaceTTS()
+
+    if require_openai and not getattr(tts, "client", None):
+        raise SystemExit(
+            "OpenAI TTS client is not available. "
+            "Check OPENAI_API_KEY and that the 'openai' package is installed."
+        )
     
     for i, slide in enumerate(slides, 1):
         speak_text = slide.get('tts') or slide.get('content') or ''
+
+        slide_id = int(slide.get('id', i))
+        filename = f"slide_{slide_id:02d}.wav"
+        filepath = audio_dir / filename
+
+        if not force:
+            # Пропускаем уже сгенерированные нормальные файлы (не заглушки)
+            # Заглушка ~1 сек тишины обычно очень маленькая (< ~100 KB).
+            if filepath.exists():
+                try:
+                    if filepath.stat().st_size > 120 * 1024:
+                        print(f"\n[{i}/{len(slides)}] {slide['title']}")
+                        print(f"   ✅ Уже есть: {filename} (skip)")
+                        continue
+                except OSError:
+                    pass
 
         print(f"\n[{i}/{len(slides)}] {slide['title']}")
         print(f"   Длина текста: {len(speak_text)} символов")
@@ -86,11 +114,6 @@ async def generate_all_slides(lang: str = "ky", deck: Optional[str] = None):
         # Синтезировать
         try:
             audio_data = await tts.synthesize(speak_text, language=language)
-            
-            # Сохранить
-            slide_id = int(slide.get('id', i))
-            filename = f"slide_{slide_id:02d}.wav"
-            filepath = audio_dir / filename
             
             with open(filepath, 'wb') as f:
                 f.write(audio_data)
@@ -112,10 +135,13 @@ if __name__ == "__main__":
     parser.add_argument("--lang", default="ky", choices=["ky", "ru"], help="Language to generate")
     parser.add_argument("--deck", default=None, choices=["rights", "mvd"], help="Deck for ru (optional)")
     parser.add_argument("--both", action="store_true", help="Generate for both ky and ru")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing files")
+    parser.add_argument("--voice", default=None, help="OpenAI voice (e.g. alloy)")
+    parser.add_argument("--require-openai", action="store_true", help="Fail if OpenAI TTS is not available")
     args = parser.parse_args()
 
     if args.both:
-        asyncio.run(generate_all_slides("ky"))
-        asyncio.run(generate_all_slides("ru", args.deck))
+        asyncio.run(generate_all_slides("ky", force=args.force, voice=args.voice, require_openai=args.require_openai))
+        asyncio.run(generate_all_slides("ru", args.deck, force=args.force, voice=args.voice, require_openai=args.require_openai))
     else:
-        asyncio.run(generate_all_slides(args.lang, args.deck))
+        asyncio.run(generate_all_slides(args.lang, args.deck, force=args.force, voice=args.voice, require_openai=args.require_openai))

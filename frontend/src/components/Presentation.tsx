@@ -17,6 +17,8 @@ const Presentation: React.FC = () => {
 
   const [presentationLanguage] = useState<PresentationLanguage>('ru');
   const audioRequestSeq = useRef(0);
+  const audioCacheRef = useRef<Map<number, Blob>>(new Map());
+  const audioPrefetchInFlightRef = useRef<Set<number>>(new Set());
   
   // Новые состояния
   const [hasStarted, setHasStarted] = useState(false);
@@ -49,6 +51,12 @@ const Presentation: React.FC = () => {
       setIsAudioPlaying(false);
       setAudioBlob(null);
       loadSlideAudio(slides[currentSlideIndex]);
+
+      // Фоном предзагружаем следующий(ие) слайд(ы), чтобы переключение было быстрее
+      const next1 = slides[currentSlideIndex + 1];
+      const next2 = slides[currentSlideIndex + 2];
+      if (next1) void prefetchSlideAudio(next1);
+      if (next2) void prefetchSlideAudio(next2);
     }
   }, [currentSlideIndex, slides, hasStarted]);
 
@@ -70,6 +78,14 @@ const Presentation: React.FC = () => {
   const loadSlideAudio = async (slide: SlideType) => {
     const requestId = ++audioRequestSeq.current;
     try {
+      // 0) Если аудио уже закешировано — используем мгновенно
+      const cached = audioCacheRef.current.get(slide.id);
+      if (cached) {
+        setAudioBlob(cached);
+        setIsAudioPlaying(true);
+        return;
+      }
+
       // 1) Пытаемся взять готовый файл озвучки для слайда
       const audioUrl = `${API_ORIGIN}/audio/ru/slide_${pad2(slide.id)}.wav`;
       const audioResponse = await fetch(audioUrl);
@@ -77,6 +93,7 @@ const Presentation: React.FC = () => {
       if (audioResponse.ok) {
         const audio = await audioResponse.blob();
         if (requestId !== audioRequestSeq.current) return;
+        audioCacheRef.current.set(slide.id, audio);
         setAudioBlob(audio);
         setIsAudioPlaying(true);
         return;
@@ -85,10 +102,38 @@ const Presentation: React.FC = () => {
       // 2) Фолбэк: синтезируем на лету (если файл отсутствует)
       const audio = await textToSpeech(slide.tts ?? slide.content, presentationLanguage);
       if (requestId !== audioRequestSeq.current) return;
+      audioCacheRef.current.set(slide.id, audio);
       setAudioBlob(audio);
       setIsAudioPlaying(true);
     } catch (err) {
       console.error('Error loading audio:', err);
+    }
+  };
+
+  const prefetchSlideAudio = async (slide: SlideType) => {
+    if (!slide) return;
+    if (audioCacheRef.current.has(slide.id)) return;
+    if (audioPrefetchInFlightRef.current.has(slide.id)) return;
+
+    audioPrefetchInFlightRef.current.add(slide.id);
+    try {
+      const audioUrl = `${API_ORIGIN}/audio/ru/slide_${pad2(slide.id)}.wav`;
+      const audioResponse = await fetch(audioUrl);
+
+      if (audioResponse.ok) {
+        const audio = await audioResponse.blob();
+        audioCacheRef.current.set(slide.id, audio);
+        return;
+      }
+
+      // Если файла нет — заранее синтезируем, чтобы на переключении было быстрее
+      const audio = await textToSpeech(slide.tts ?? slide.content, presentationLanguage);
+      audioCacheRef.current.set(slide.id, audio);
+    } catch (err) {
+      // Prefetch не должен ломать UX
+      console.warn('Prefetch audio failed:', err);
+    } finally {
+      audioPrefetchInFlightRef.current.delete(slide.id);
     }
   };
 
