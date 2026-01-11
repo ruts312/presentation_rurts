@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Slide from './Slide';
 import AudioPlayer from './AudioPlayer';
 import VoiceRecorder from './VoiceRecorder';
@@ -6,12 +6,17 @@ import { fetchSlides, textToSpeech, speechToText, askQuestion, Slide as SlideTyp
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
+type PresentationLanguage = 'ky' | 'ru';
+
 const Presentation: React.FC = () => {
   const [slides, setSlides] = useState<SlideType[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [presentationLanguage] = useState<PresentationLanguage>('ru');
+  const audioRequestSeq = useRef(0);
   
   // Новые состояния
   const [hasStarted, setHasStarted] = useState(false);
@@ -34,7 +39,7 @@ const Presentation: React.FC = () => {
   
   // Загрузка слайдов при монтировании
   useEffect(() => {
-    loadSlides();
+    loadSlides('ru');
   }, []);
 
   // Загрузка аудио при смене слайда
@@ -44,14 +49,15 @@ const Presentation: React.FC = () => {
     }
   }, [currentSlideIndex, slides, hasStarted]);
 
-  const loadSlides = async () => {
+  const loadSlides = async (language: PresentationLanguage) => {
     try {
       setIsLoading(true);
-      const data = await fetchSlides();
+      const data = await fetchSlides(language);
       setSlides(data.slides);
+      setCurrentSlideIndex(0);
       setError(null);
     } catch (err) {
-      setError('Слайддарды жүктөөдө ката кетти');
+      setError('Ошибка загрузки слайдов');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -59,20 +65,23 @@ const Presentation: React.FC = () => {
   };
 
   const loadSlideAudio = async (slide: SlideType) => {
+    const requestId = ++audioRequestSeq.current;
     try {
       // 1) Пытаемся взять готовый файл озвучки для слайда
-      const audioUrl = `${API_ORIGIN}/audio/slide_${pad2(slide.id)}.wav`;
+      const audioUrl = `${API_ORIGIN}/audio/ru/slide_${pad2(slide.id)}.wav`;
       const audioResponse = await fetch(audioUrl);
 
       if (audioResponse.ok) {
         const audio = await audioResponse.blob();
+        if (requestId !== audioRequestSeq.current) return;
         setAudioBlob(audio);
         setIsAudioPlaying(true);
         return;
       }
 
       // 2) Фолбэк: синтезируем на лету (если файл отсутствует)
-      const audio = await textToSpeech(slide.tts ?? slide.content);
+      const audio = await textToSpeech(slide.tts ?? slide.content, presentationLanguage);
+      if (requestId !== audioRequestSeq.current) return;
       setAudioBlob(audio);
       setIsAudioPlaying(true);
     } catch (err) {
@@ -83,12 +92,16 @@ const Presentation: React.FC = () => {
   const handleAudioEnd = () => {
     setIsAudioPlaying(false);
     // Автоматически перейти к следующему слайду
-    if (isPlaying && currentSlideIndex < slides.length - 1) {
+    if (isPlaying) {
       setTimeout(() => {
-        setCurrentSlideIndex(currentSlideIndex + 1);
+        setCurrentSlideIndex((idx) => {
+          if (idx >= slides.length - 1) {
+            setIsPlaying(false);
+            return idx;
+          }
+          return idx + 1;
+        });
       }, 1000); // Пауза 1 секунда перед следующим слайдом
-    } else if (currentSlideIndex === slides.length - 1) {
-      setIsPlaying(false);
     }
   };
 
@@ -128,6 +141,7 @@ const Presentation: React.FC = () => {
         question,
         slide_context: currentSlide.content,
         slide_id: currentSlide.id,
+        language: presentationLanguage,
       });
 
       // Конвертировать base64 аудио в Blob
@@ -141,7 +155,9 @@ const Presentation: React.FC = () => {
       setMessages(prev => [...prev, { role: 'assistant', text: response.answer, audio: answerBlob }]);
     } catch (err) {
       console.error('Error processing question:', err);
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Извините, произошла ошибка при обработке вашего вопроса.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: presentationLanguage === 'ru'
+        ? 'Извините, произошла ошибка при обработке вашего вопроса.'
+        : 'Кечиресиз, суроону иштетүүдө ката кетти.' }]);
     } finally {
       setIsProcessingQA(false);
     }
@@ -154,17 +170,18 @@ const Presentation: React.FC = () => {
       // 1. Распознать речь
       let transcription = '';
       try {
-        transcription = (await speechToText(recordedAudioBlob)).trim();
+        transcription = (await speechToText(recordedAudioBlob, presentationLanguage)).trim();
       } catch (err) {
         console.error('STT error:', err);
-        const msg = err instanceof Error && err.message ? err.message : 'Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.';
+        const fallback = 'Не удалось распознать речь. Попробуйте ещё раз.';
+        const msg = err instanceof Error && err.message ? err.message : fallback;
         showSttFailurePopup(msg);
         return;
       }
 
       // Если распознать не удалось — не отправляем в чат, а показываем окошко.
       if (!transcription) {
-        showSttFailurePopup('Үндү таануу мүмкүн болгон жок. Кайра аракет кылып көрүңүз.');
+        showSttFailurePopup('Не удалось распознать речь. Попробуйте ещё раз.');
         return;
       }
 
@@ -185,7 +202,7 @@ const Presentation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Презентация жүктөлүүдө...</p>
+          <p className="text-gray-600 dark:text-gray-400">Загрузка презентации...</p>
         </div>
       </div>
     );
@@ -195,7 +212,7 @@ const Presentation: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center text-red-600">
-          <p className="text-xl font-bold mb-2">❌ Ката</p>
+          <p className="text-xl font-bold mb-2">❌ Ошибка</p>
           <p>{error}</p>
         </div>
       </div>
@@ -205,7 +222,7 @@ const Presentation: React.FC = () => {
   if (slides.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <p className="text-gray-600 dark:text-gray-400">Жеткиликтүү слайд жок</p>
+        <p className="text-gray-600 dark:text-gray-400">Нет доступных слайдов</p>
       </div>
     );
   }
@@ -216,21 +233,22 @@ const Presentation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 to-indigo-900">
         <div className="text-center text-white px-4">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-pulse">
-            🌍 Адам Укуктары
+            Права человека и МВД Кыргызской Республики
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Кыргыз тилиндеги интерактивдүү презентация
+            Презентация о правах человека и о том, как МВД помогает защищать эти права
           </p>
           <div className="mb-8 text-lg text-blue-100">
             <p>📊 {slides.length} слайд</p>
-            <p>🎤 ЖИ менен үн жардамчысы</p>
-            <p>🔊 Автоматтык үндөө</p>
+            <p>🎤 Голосовой ИИ‑ассистент</p>
+            <p>🔊 Автоматическая озвучка</p>
           </div>
+
           <button
             onClick={startPresentation}
             className="bg-white text-blue-600 px-12 py-6 rounded-2xl font-bold text-2xl hover:bg-blue-50 transition-all transform hover:scale-105 shadow-2xl"
           >
-            ▶️ Презентацияны баштоо
+            ▶️ Начать презентацию
           </button>
         </div>
       </div>
@@ -247,7 +265,7 @@ const Presentation: React.FC = () => {
           {/* Заголовок и контроли */}
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-              🌍 Адам укуктары
+              Права человека и МВД Кыргызской Республики
             </h1>
             <div className="flex gap-2">
               <button
@@ -420,7 +438,7 @@ const Presentation: React.FC = () => {
             <div className="flex items-start gap-3">
               <div className="text-2xl">⚠️</div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ката</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ошибка</h3>
                 <p className="mt-2 text-gray-700 dark:text-gray-300">{sttErrorMessage}</p>
               </div>
             </div>

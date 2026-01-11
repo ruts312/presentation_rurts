@@ -30,6 +30,7 @@ export interface QARequest {
   question: string;
   slide_context: string;
   slide_id: number;
+  language?: string;
 }
 
 export interface QAResponse {
@@ -40,8 +41,10 @@ export interface QAResponse {
 }
 
 // Получить все слайды
-export const fetchSlides = async (): Promise<SlidesResponse> => {
-  const response = await api.get<SlidesResponse>('/slides');
+export const fetchSlides = async (language: string = 'ky', deck?: string): Promise<SlidesResponse> => {
+  const response = await api.get<SlidesResponse>('/slides', {
+    params: { lang: language, deck },
+  });
   return response.data;
 };
 
@@ -52,19 +55,20 @@ export const fetchSlide = async (slideId: number): Promise<Slide> => {
 };
 
 // Синтез речи (TTS)
-export const textToSpeech = async (text: string): Promise<Blob> => {
+export const textToSpeech = async (text: string, language: string = 'ky'): Promise<Blob> => {
   const response = await api.post(
     '/tts',
-    { text, language: 'ky' },
+    { text, language },
     { responseType: 'blob' }
   );
   return response.data;
 };
 
 // Распознавание речи (STT)
-export const speechToText = async (audioBlob: Blob): Promise<string> => {
+export const speechToText = async (audioBlob: Blob, language: string = 'ky'): Promise<string> => {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
+  formData.append('language', language);
 
   try {
     const response = await api.post('/stt', formData, {

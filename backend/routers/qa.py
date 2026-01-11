@@ -13,6 +13,7 @@ class QARequest(BaseModel):
     question: str
     slide_context: str = ""
     slide_id: int = 0
+    language: str = "ky"
 
 @router.post("/qa")
 async def question_answer(request: QARequest):
@@ -24,11 +25,12 @@ async def question_answer(request: QARequest):
         answer_text = await qa_service.get_answer(
             question=request.question,
             context=request.slide_context,
-            slide_id=request.slide_id
+            slide_id=request.slide_id,
+            language=request.language,
         )
         
         # Озвучка ответа
-        audio_data = await tts_service.synthesize(answer_text, "ky")
+        audio_data = await tts_service.synthesize(answer_text, request.language)
         
         # Конвертация аудио в base64 для передачи в JSON
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')

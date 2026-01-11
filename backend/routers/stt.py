@@ -1,11 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from services.whisper_stt import WhisperSTT
 
 router = APIRouter()
 stt_service = WhisperSTT()
 
 @router.post("/stt")
-async def speech_to_text(audio: UploadFile = File(...)):
+async def speech_to_text(
+    audio: UploadFile = File(...),
+    language: str = Form(default=""),
+):
     """
     Распознать речь из аудио файла
     Поддерживаемые форматы: wav, mp3, m4a, webm, ogg
@@ -38,11 +41,12 @@ async def speech_to_text(audio: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="Empty audio")
 
         # Распознавание речи
-        transcription = await stt_service.transcribe(audio_data, audio.filename)
+        language_hint = (language or "").strip().lower()
+        transcription = await stt_service.transcribe(audio_data, audio.filename, language_hint=language_hint)
 
         return {
             "text": transcription,
-            "language": "ky",
+            "language": language_hint or "auto",
             "filename": audio.filename,
         }
 

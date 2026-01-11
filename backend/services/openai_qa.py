@@ -24,7 +24,8 @@ class OpenAIQA:
         self,
         question: str,
         context: str = "",
-        slide_id: int = 0
+        slide_id: int = 0,
+        language: str = "ky",
     ) -> str:
         """
         Получить ответ на вопрос с учетом контекста презентации
@@ -35,25 +36,43 @@ class OpenAIQA:
             slide_id: ID текущего слайда
             
         Returns:
-            str: Ответ на кыргызском языке
+            str: Ответ на языке презентации (ky или ru)
         """
         if not self.api_key or not openai:
             logger.warning("OPENAI_API_KEY not set, returning mock answer")
+            if (language or "").strip().lower() == "ru":
+                return "Это тестовый ответ. Укажите OPENAI_API_KEY. Вопрос: " + question
             return "Бул тест жообу. OpenAI API ачкычын коюңуз. Суроо: " + question
         
+        lang = (language or "ky").strip().lower()
+
         # Системный промпт
-        system_prompt = """Сиз адам укуктары боюнча эксперт экенсиз.
-Суроолорго кыргыз тилинде так, түшүнүктүү жана кыска жооп бериңиз.
-Жоопторуңуз презентациянын контекстине ылайык болсун.
-Жооптор 3-4 сүйлөмдөн ашпасын."""
+        if lang == "ru":
+            system_prompt = """Вы эксперт по правам человека.
+    Отвечайте на русском языке чётко, понятно и кратко.
+    Ответ должен опираться на контекст текущего слайда.
+    Не более 3–4 предложений."""
+        else:
+            system_prompt = """Сиз адам укуктары боюнча эксперт экенсиз.
+    Суроолорго кыргыз тилинде так, түшүнүктүү жана кыска жооп бериңиз.
+    Жоопторуңуз презентациянын контекстине ылайык болсун.
+    Жооптор 3-4 сүйлөмдөн ашпасын."""
 
         # Пользовательский промпт с контекстом
-        user_prompt = f"""Презентациянын {slide_id}-слайды:
-{context}
+        if lang == "ru":
+            user_prompt = f"""Слайд {slide_id} презентации:
+    {context}
 
-Суроо: {question}
+    Вопрос: {question}
 
-Жооп:"""
+    Ответ:"""
+        else:
+            user_prompt = f"""Презентациянын {slide_id}-слайды:
+    {context}
+
+    Суроо: {question}
+
+    Жооп:"""
 
         try:
             from openai import OpenAI
@@ -74,4 +93,6 @@ class OpenAIQA:
             
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
+            if lang == "ru":
+                return f"Произошла ошибка при получении ответа: {str(e)}"
             return f"Жообун алууда катачылык болду: {str(e)}"

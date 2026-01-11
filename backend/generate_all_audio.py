@@ -1,11 +1,23 @@
-"""
-Генерация аудио для всех 25 слайдов
+"""generate_all_audio.py
+
+Генерация озвучки слайдов.
+
+По умолчанию сохраняет кыргызскую озвучку как раньше:
+    backend/data/audio/slide_01.wav
+
+Для русской версии сохраняет отдельным набором, чтобы не перезаписывать:
+    backend/data/audio/ru/slide_01.wav
+
+Для русской презентации про МВД:
+    backend/data/audio/ru/mvd/slide_01.wav
 """
 import asyncio
+import argparse
 import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
 from services.huggingface_tts import HuggingFaceTTS
 
@@ -21,25 +33,44 @@ _stderr_reconfigure = getattr(sys.stderr, "reconfigure", None)
 if callable(_stderr_reconfigure):
     _stderr_reconfigure(encoding="utf-8", errors="replace")
 
-async def generate_all_slides():
-    """Генерирует аудио для всех слайдов"""
+def _resolve_paths(lang: str, deck: Optional[str] = None) -> tuple[Path, Path, str]:
+    language = (lang or "ky").strip().lower()
+    if language == "ru":
+        normalized_deck = (deck or "rights").strip().lower()
+        if normalized_deck == "mvd":
+            slides_file = Path("data") / "slides_ru_mvd.json"
+            audio_dir = Path("data") / "audio" / "ru" / "mvd"
+            return slides_file, audio_dir, "ru"
+
+        slides_file = Path("data") / "slides_ru.json"
+        audio_dir = Path("data") / "audio" / "ru"
+        return slides_file, audio_dir, "ru"
+
+    slides_file = Path("data") / "slides.json"
+    audio_dir = Path("data") / "audio"
+    return slides_file, audio_dir, "ky"
+
+
+async def generate_all_slides(lang: str = "ky", deck: Optional[str] = None):
+    """Генерирует аудио для всех слайдов выбранного языка"""
     
     # Убедимся что используем OpenAI
     os.environ['USE_LOCAL_TTS'] = 'false'
     
+    slides_file, audio_dir, language = _resolve_paths(lang, deck)
+
     # Загрузить слайды
-    with open('data/slides.json', 'r', encoding='utf-8') as f:
+    with open(slides_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     slides = data['slides']
     
     # Создать папку для аудио
-    audio_dir = Path('data/audio')
-    audio_dir.mkdir(exist_ok=True)
+    audio_dir.mkdir(parents=True, exist_ok=True)
     
     print("=" * 80)
-    print(f"Audio generation for {len(slides)} slides")
-    print("Voice: onyx (OpenAI TTS HD)")
+    print(f"Audio generation for {len(slides)} slides (lang={language})")
+    print(f"Voice: {os.getenv('TTS_VOICE', 'onyx')} (OpenAI TTS)")
     print("=" * 80)
     print()
     
@@ -54,7 +85,7 @@ async def generate_all_slides():
         
         # Синтезировать
         try:
-            audio_data = await tts.synthesize(speak_text, language='ky')
+            audio_data = await tts.synthesize(speak_text, language=language)
             
             # Сохранить
             slide_id = int(slide.get('id', i))
@@ -77,4 +108,14 @@ async def generate_all_slides():
     print("=" * 80)
 
 if __name__ == "__main__":
-    asyncio.run(generate_all_slides())
+    parser = argparse.ArgumentParser(description="Generate slide audio")
+    parser.add_argument("--lang", default="ky", choices=["ky", "ru"], help="Language to generate")
+    parser.add_argument("--deck", default=None, choices=["rights", "mvd"], help="Deck for ru (optional)")
+    parser.add_argument("--both", action="store_true", help="Generate for both ky and ru")
+    args = parser.parse_args()
+
+    if args.both:
+        asyncio.run(generate_all_slides("ky"))
+        asyncio.run(generate_all_slides("ru", args.deck))
+    else:
+        asyncio.run(generate_all_slides(args.lang, args.deck))

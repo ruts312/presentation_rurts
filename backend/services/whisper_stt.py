@@ -20,7 +20,12 @@ class WhisperSTT:
         if self.api_key and openai:
             openai.api_key = self.api_key
     
-    async def transcribe(self, audio_data: bytes, filename: str = "audio.wav") -> str:
+    async def transcribe(
+        self,
+        audio_data: bytes,
+        filename: str = "audio.wav",
+        language_hint: Optional[str] = None,
+    ) -> str:
         """
         Распознать речь из аудио
         
@@ -47,16 +52,21 @@ class WhisperSTT:
             # Распознавание через Whisper API
             # Важно: Whisper API не поддерживает language="ky" (Kyrgyz) и вернёт 400.
             # Поэтому для кыргызского используем авто-определение языка (не передаём параметр language).
-            language_hint_raw = (os.getenv("STT_LANGUAGE", "ky") or "").strip().lower()
-            language_hint: Optional[str] = language_hint_raw if language_hint_raw and language_hint_raw not in {"ky", "kyrgyz", "kirghiz"} else None
+            provided_hint_raw = (language_hint or "").strip().lower()
+            provided_hint: Optional[str] = provided_hint_raw if provided_hint_raw and provided_hint_raw not in {"ky", "kyrgyz", "kirghiz"} else None
+
+            env_hint_raw = (os.getenv("STT_LANGUAGE", "ky") or "").strip().lower()
+            env_hint: Optional[str] = env_hint_raw if env_hint_raw and env_hint_raw not in {"ky", "kyrgyz", "kirghiz"} else None
+
+            effective_hint = provided_hint or env_hint
 
             with open(temp_path, "rb") as audio_file:
                 params = {
                     "model": "whisper-1",
                     "file": audio_file,
                 }
-                if language_hint:
-                    params["language"] = language_hint
+                if effective_hint:
+                    params["language"] = effective_hint
 
                 try:
                     transcript = client.audio.transcriptions.create(**params)
