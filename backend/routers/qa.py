@@ -13,7 +13,7 @@ class QARequest(BaseModel):
     question: str
     slide_context: str = ""
     slide_id: int = 0
-    language: str = "ky"
+    language: str = "ru"
 
 @router.post("/qa")
 async def question_answer(request: QARequest):
@@ -50,6 +50,6 @@ async def test_qa():
     """Тестовый эндпоинт для проверки QA сервиса"""
     return {
         "status": "ready",
-        "service": "OpenAI GPT-4",
-        "features": ["question_answering", "context_aware", "kyrgyz_language"]
+        "service": "OpenAI Chat (configurable via QA_MODEL)",
+        "features": ["question_answering", "context_aware", "ru_default", "kyrgyz_supported"]
     }

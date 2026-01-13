@@ -47,39 +47,39 @@ const getSlideImageUrl = (slide: SlideType) => {
 
 const Slide: React.FC<SlideProps> = ({ slide }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 min-h-[520px] relative">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 md:p-6 relative max-h-[calc(100vh-260px)] overflow-hidden">
       <img
         src={logo}
         alt="Logo"
-        className="absolute right-6 top-6 md:right-10 md:top-10 w-16 h-auto md:w-20 select-none"
+        className="absolute right-4 top-4 md:right-6 md:top-6 w-12 h-auto md:w-16 select-none"
         draggable={false}
       />
 
-      <div className="pt-12 md:pt-14">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="pt-10 md:pt-12 h-full overflow-auto pr-1">
+        <div className="mb-4 flex items-center justify-between">
           <span className="text-blue-600 dark:text-blue-300 text-sm font-semibold">
             Слайд {slide.id}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Текст слева */}
         <div className="flex flex-col">
-          <h1 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             {slide.title}
           </h1>
-          <div className="text-lg md:text-xl text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+          <div className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
             {slide.content}
           </div>
         </div>
 
         {/* Картинка справа */}
-        <div className="w-full mt-6 lg:mt-10">
+        <div className="w-full mt-4 lg:mt-6">
           <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900">
             <img
               src={getSlideImageUrl(slide)}
               alt={slide.title}
-              className="w-full h-[260px] md:h-[360px] object-cover"
+              className="w-full h-[200px] md:h-[260px] object-cover"
               loading="lazy"
               referrerPolicy="no-referrer"
             />

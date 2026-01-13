@@ -314,11 +314,11 @@ const Presentation: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
       {/* Основной контент */}
-      <div className="flex-1 p-4 md:p-8 pb-0">
+      <div className="flex-1 p-3 md:p-6 pb-0">
         <div className="w-full max-w-none">
           {/* Заголовок и контроли */}
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="flex justify-between items-center mb-3 md:mb-4">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
               Права человека и МВД Кыргызской Республики
             </h1>
             <div className="flex gap-2">
@@ -332,7 +332,7 @@ const Presentation: React.FC = () => {
           </div>
 
           {/* Слайд */}
-          <div className="mb-6">
+          <div className="mb-3 md:mb-4">
             <Slide slide={currentSlide} />
           </div>
 
@@ -348,7 +348,7 @@ const Presentation: React.FC = () => {
           )}
 
           {/* Навигация */}
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-3 md:mb-4">
             <button
               onClick={previousSlide}
               disabled={currentSlideIndex === 0}

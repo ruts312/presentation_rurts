@@ -41,7 +41,7 @@ export interface QAResponse {
 }
 
 // Получить все слайды
-export const fetchSlides = async (language: string = 'ky', deck?: string): Promise<SlidesResponse> => {
+export const fetchSlides = async (language: string = 'ru', deck?: string): Promise<SlidesResponse> => {
   const response = await api.get<SlidesResponse>('/slides', {
     params: { lang: language, deck },
   });
@@ -55,7 +55,7 @@ export const fetchSlide = async (slideId: number): Promise<Slide> => {
 };
 
 // Синтез речи (TTS)
-export const textToSpeech = async (text: string, language: string = 'ky'): Promise<Blob> => {
+export const textToSpeech = async (text: string, language: string = 'ru'): Promise<Blob> => {
   const response = await api.post(
     '/tts',
     { text, language },
@@ -65,7 +65,7 @@ export const textToSpeech = async (text: string, language: string = 'ky'): Promi
 };
 
 // Распознавание речи (STT)
-export const speechToText = async (audioBlob: Blob, language: string = 'ky'): Promise<string> => {
+export const speechToText = async (audioBlob: Blob, language: string = 'ru'): Promise<string> => {
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
   formData.append('language', language);
