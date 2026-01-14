@@ -287,10 +287,10 @@ const Presentation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 to-indigo-900">
         <div className="text-center text-white px-4">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-pulse">
-            Права человека и МВД Кыргызской Республики
+            Роль МВД КР по защите прав человека.
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Презентация о правах человека и о том, как МВД помогает защищать эти права
+            Презентация о роли МВД Кыргызской Республики в защите прав человека
           </p>
           <div className="mb-8 text-lg text-blue-100">
             <p>📊 {slides.length} слайд</p>
@@ -319,7 +319,7 @@ const Presentation: React.FC = () => {
           {/* Заголовок и контроли */}
           <div className="flex justify-between items-center mb-3 md:mb-4">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-              Права человека и МВД Кыргызской Республики
+              Роль МВД КР по защите прав человека.
             </h1>
             <div className="flex gap-2">
               <button
