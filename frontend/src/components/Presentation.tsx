@@ -287,7 +287,7 @@ const Presentation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 to-indigo-900">
         <div className="text-center text-white px-4">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-pulse">
-            Роль МВД КР по защите прав человека.
+            Роль МВД Кыргызской Республики по защите прав человека.
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-blue-100">
             Презентация о роли МВД Кыргызской Республики в защите прав человека
